@@ -1,0 +1,5 @@
+struct Payload {
+    unsigned long sequence_number;
+    unsigned long long timestamp_tx; // Marca de tiempo en microsegundos
+    sequence<octet> data;            // Carga útil de tamaño variable
+};
