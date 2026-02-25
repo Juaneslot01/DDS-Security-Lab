@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <fstream>
 
 using namespace eprosima::fastdds::dds;
 
@@ -141,7 +142,7 @@ void payloadSubscriber::SubListener::on_data_available(
             // Cálculo de latencia: Tiempo de Recepción - Tiempo de Envío (TX)
             uint64_t latency_us = timestamp_rx - st.timestamp_tx();
 
-            // Salida limpia para tu CSV de tesis: SeqNum, PayloadSize, Latency(us)
+            // Salida limpia para tu CSV: SeqNum, PayloadSize, Latency(us)
             std::cout << st.sequence_number() << "," << st.data().size() << "," << latency_us << std::endl;
         }
     }
