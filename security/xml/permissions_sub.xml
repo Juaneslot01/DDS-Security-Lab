@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================================
+  permissions_sub.xml
+  ============================================================================
+  Documento de PERMISOS DDS-Security para el participante SUSCRIPTOR.
+
+  Este archivo define exactamente qué operaciones DDS puede realizar el nodo
+  cuyo certificado X.509 tiene el subject CN=PayloadSubscriber.
+
+  Ámbito de aplicación por escenario:
+  ─────────────────────────────────────────────────────────────────────────────
+  • auth    → El plugin de control de acceso CARGA este archivo para validar
+              que el suscriptor tiene permiso de unirse al dominio 0
+              (enable_join_access_control = true en gov_auth.xml).
+              Las restricciones por tópico NO se evalúan porque
+              enable_read_access_control = false en esa gobernanza.
+
+  • encrypt → Igual que auth: solo se valida el acceso al dominio.
+              El cifrado lo controla la gobernanza, no este archivo.
+
+  • access  → Aquí los permisos toman su máximo efecto. La gobernanza
+              gov_access.xml activa enable_read_access_control = true,
+              por lo que FastDDS verificará en tiempo real que este grant
+              autoriza la suscripción al tópico solicitado.
+              Solo se permitirá suscribirse a "payloadTopic". Cualquier
+              intento de suscripción a otro tópico de usuario será DENEGADO.
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Firma: Este archivo XML debe ser firmado con la clave privada de la CA
+  mediante el script generate_security_artifacts.sh para producir el archivo
+  security/signed/permissions_sub.p7s que carga FastDDS en ejecución.
+
+  NOTA sobre discovery: los tópicos built-in de RTPS (rtps_...Topic, etc.)
+  utilizados para el descubrimiento de participantes/endpoints están exentos
+  del control de acceso por la especificación DDS-Security y no necesitan
+  aparecer aquí.
+  ============================================================================
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_permissions.xsd">
+
+    <permissions>
+
+        <!--
+          ══════════════════════════════════════════════════════════════════════
+          Grant: SubscriberPermissions
+          ══════════════════════════════════════════════════════════════════════
+          Aplica al participante cuyo certificado tenga exactamente el subject:
+            CN=PayloadSubscriber, O=eProsima, C=ES
+
+          Este subject DEBE coincidir (tras normalización RFC 2253) con el
+          campo Subject del certificado security/pki/subscriber_cert.pem
+          generado por generate_security_artifacts.sh con la opción:
+            -subj "/C=ES/O=eProsima/CN=PayloadSubscriber"
+          ══════════════════════════════════════════════════════════════════════
+        -->
+        <grant name="SubscriberPermissions">
+
+            <!-- Identificador del participante al que aplica este grant.
+                 Debe ser el Distinguished Name (DN) en formato RFC 2253,
+                 que es el INVERSO del formato slash de OpenSSL. -->
+            <subject_name>CN=PayloadSubscriber, O=eProsima, C=ES</subject_name>
+
+            <!--
+              Ventana de validez temporal.
+              FastDDS comprueba que el instante actual esté dentro de este
+              rango. Ajusta not_after a la fecha de fin de tus pruebas.
+              Formato: YYYY-MM-DDTHH:MM:SS  (ISO 8601, hora local o UTC)
+            -->
+            <validity>
+                <not_before>2024-01-01T00:00:00</not_before>
+                <not_after>2034-12-31T23:59:59</not_after>
+            </validity>
+
+            <!--
+              ────────────────────────────────────────────────────────────────
+              Regla de PERMISO (allow_rule)
+              ────────────────────────────────────────────────────────────────
+              Cuando la gobernanza activa el control de acceso, FastDDS busca
+              la primera regla que coincida con la operación solicitada.
+              Si coincide con un allow_rule → PERMITIDO.
+              Si no coincide con ninguna → se aplica <default>.
+              ────────────────────────────────────────────────────────────────
+            -->
+            <allow_rule>
+
+                <!-- Dominio DDS al que aplica esta regla.
+                     El publicador y suscriptor usan el dominio 0 (ver init()). -->
+                <domains>
+                    <id>0</id>
+                </domains>
+
+                <!--
+                  SUSCRIPCIONES PERMITIDAS
+                  ────────────────────────────────────────────────────────────
+                  Solo se autoriza la suscripción al tópico "payloadTopic",
+                  que es el único tópico de usuario que este nodo consume.
+
+                  Efecto por escenario:
+                    · auth / encrypt → esta sección es IGNORADA por la
+                      gobernanza (enable_read_access_control = false).
+                      El suscriptor puede unirse al dominio con este grant.
+                    · access         → esta sección se EVALÚA. El suscriptor
+                      solo podrá recibir datos de "payloadTopic". Si el
+                      DataReader intenta suscribirse a cualquier otro tópico
+                      de usuario, FastDDS lo rechazará.
+                  ────────────────────────────────────────────────────────────
+                -->
+                <subscribe>
+                    <topics>
+                        <topic>payloadTopic</topic>
+                    </topics>
+                </subscribe>
+
+            </allow_rule>
+
+            <!--
+              Acción por defecto para operaciones NO cubiertas por ninguna
+              allow_rule. DENY garantiza que el suscriptor no pueda publicar
+              ni suscribirse a tópicos distintos de los explícitamente
+              autorizados en el escenario "access".
+            -->
+            <default>DENY</default>
+
+        </grant>
+
+    </permissions>
+
+</dds>

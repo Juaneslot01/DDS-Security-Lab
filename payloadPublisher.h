@@ -23,6 +23,8 @@
 #ifndef _FAST_DDS_GENERATED_PAYLOAD_PUBLISHER_H_
 #define _FAST_DDS_GENERATED_PAYLOAD_PUBLISHER_H_
 
+#include <string>
+
 #include <fastdds/dds/domain/DomainParticipant.hpp>
 #include <fastdds/dds/publisher/DataWriter.hpp>
 #include <fastdds/dds/publisher/DataWriterListener.hpp>
@@ -37,7 +39,16 @@ public:
 
     virtual ~payloadPublisher();
 
-    bool init();
+    /**
+     * @brief Inicializa el participante DDS, publisher, tópico y DataWriter.
+     *
+     * @param escenario Escenario de seguridad DDS-Security a aplicar.
+     *                  Valores: "none" | "auth" | "encrypt" | "access"
+     *                  Por defecto "none" (sin seguridad) para compatibilidad
+     *                  con el modo de pruebas de línea base.
+     * @return true si todos los recursos DDS se crearon correctamente.
+     */
+    bool init(const std::string& escenario = "none");
 
     bool publish(uint32_t payload_size_bytes, uint32_t sleep_us);
 

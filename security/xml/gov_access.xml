@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    gov_access.xml ─ Escenario "access"
+    ════════════════════════════════════════════════════════════════════════════
+    Política de gobernanza DDS-Security para el escenario de control de acceso
+    total. Exige autenticación mutua, cifrado completo AES-GCM en todos los
+    niveles del protocolo RTPS *y* aplica el control de acceso a nivel de tópico.
+
+    La diferencia clave respecto a gov_encrypt.xml es que aquí los flags
+    <enable_read_access_control> y <enable_write_access_control> están en TRUE,
+    lo que obliga al plugin Access-Permissions a verificar que el participante
+    tenga permisos explícitos en su archivo permissions_*.p7s antes de permitirle
+    publicar o suscribirse a cualquier tópico.
+
+    Firmado requerido: openssl smime -sign ... → signed/gov_access.p7s
+    Usado por:         SecurityConfig::configure_security_qos(..., "access")
+    ════════════════════════════════════════════════════════════════════════════
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_governance.xsd">
+
+    <domain_access_rules>
+
+        <domain_rule>
+
+            <!-- Dominio DDS 0 (el que usan Publisher y Subscriber) -->
+            <domains>
+                <id>0</id>
+            </domains>
+
+            <!--
+                AUTENTICACIÓN OBLIGATORIA
+                Ningún participante puede unirse al dominio sin presentar
+                un certificado X.509 válido firmado por la CA.
+            -->
+            <allow_unauthenticated_participants>false</allow_unauthenticated_participants>
+
+            <!--
+                CONTROL DE ACCESO AL DOMINIO
+                Además de autenticarse, cada participante debe tener un
+                documento de permisos (.p7s) válido que le autorice a unirse
+                a este dominio DDS.
+            -->
+            <enable_join_access_control>true</enable_join_access_control>
+
+            <!--
+                PROTECCIÓN DE DESCUBRIMIENTO (RTPS PDP/EDP)
+                Los mensajes SPDP y SEDP se cifran con AES-GCM para que
+                ningún observador pasivo pueda ver qué tópicos existen.
+            -->
+            <discovery_protection_kind>ENCRYPT</discovery_protection_kind>
+
+            <!--
+                PROTECCIÓN DE LIVELINESS
+                Los anuncios de "sigo vivo" (LIVELINESS) se cifran para
+                impedir que un tercero deduzca la topología de la red.
+            -->
+            <liveliness_protection_kind>ENCRYPT</liveliness_protection_kind>
+
+            <!--
+                PROTECCIÓN A NIVEL RTPS
+                Todo el transporte RTPS (cabeceras, submensajes) se cifra.
+                Esto garantiza confidencialidad e integridad end-to-end
+                incluso si el canal de transporte (UDP) no es seguro.
+            -->
+            <rtps_protection_kind>ENCRYPT</rtps_protection_kind>
+
+            <!-- ─────────────────── REGLAS POR TÓPICO ─────────────────── -->
+            <topic_access_rules>
+
+                <topic_rule>
+
+                    <!--
+                        Patrón glob que aplica esta regla a TODOS los tópicos.
+                        FastDDS evalúa las reglas en orden; la primera que
+                        coincida gana.
+                    -->
+                    <topic_expression>*</topic_expression>
+
+                    <!--
+                        Los mensajes de descubrimiento propios de este tópico
+                        (SEDP) también se cifran, consistente con la política
+                        global de discovery_protection_kind=ENCRYPT.
+                    -->
+                    <enable_discovery_protection>true</enable_discovery_protection>
+
+                    <!--
+                        La protección de liveliness se activa también a nivel
+                        de tópico individual.
+                    -->
+                    <enable_liveliness_protection>true</enable_liveliness_protection>
+
+                    <!--
+                        ★ CONTROL DE ACCESO DE LECTURA ACTIVO ★
+                        El plugin Access-Permissions verificará que el
+                        suscriptor tenga una regla <subscribe> en su
+                        permissions_sub.p7s para este tópico antes de
+                        permitirle recibir datos.
+                    -->
+                    <enable_read_access_control>true</enable_read_access_control>
+
+                    <!--
+                        ★ CONTROL DE ACCESO DE ESCRITURA ACTIVO ★
+                        El plugin Access-Permissions verificará que el
+                        publicador tenga una regla <publish> en su
+                        permissions_pub.p7s para este tópico antes de
+                        permitirle enviar datos.
+                    -->
+                    <enable_write_access_control>true</enable_write_access_control>
+
+                    <!--
+                        Los metadatos del DataWriter/DataReader (QoS embebido
+                        en los submensajes RTPS) se cifran con AES-GCM-GMAC.
+                    -->
+                    <metadata_protection_kind>ENCRYPT</metadata_protection_kind>
+
+                    <!--
+                        El payload de usuario (los bytes del mensaje IDL) se
+                        cifra con AES-GCM antes de transmitirse.
+                        Esto es la protección de datos de la especificación.
+                    -->
+                    <data_protection_kind>ENCRYPT</data_protection_kind>
+
+                </topic_rule>
+
+            </topic_access_rules>
+
+        </domain_rule>
+
+    </domain_access_rules>
+
+</dds>

@@ -28,6 +28,8 @@
 #include <fastdds/dds/subscriber/DataReaderListener.hpp>
 #include <fastdds/dds/subscriber/Subscriber.hpp>
 
+#include <string>
+
 class payloadSubscriber
 {
 public:
@@ -36,7 +38,19 @@ public:
 
     virtual ~payloadSubscriber();
 
-    bool init();
+    /**
+     * @brief Inicializa el participante DDS con el escenario de seguridad indicado.
+     *
+     * Llama internamente a security::configure_security_qos() para inyectar los
+     * plugins PKI-DH, Access-Permissions y AES-GCM-GMAC según corresponda.
+     *
+     * @param escenario  "none" | "auth" | "encrypt" | "access"
+     *                   Por defecto "none" (sin seguridad) para compatibilidad
+     *                   con el comportamiento original del binario.
+     * @return true si el participante, suscriptor, tópico y DataReader
+     *         se crearon correctamente; false en caso contrario.
+     */
+    bool init(const std::string& escenario = "none");
 
     void run();
 

@@ -1,6 +1,31 @@
+# Build & runtime artifacts
 build/
 venv/
+
+# Resultados de experimentos
 *.csv
+
+# Control de versiones y entorno
 .git/
 .vscode/
+
+# Imágenes generadas por el script de graficado
 *.png
+
+# ==============================================================================
+# Artefactos de seguridad DDS-Security (generados por generate_security_artifacts.sh)
+# ==============================================================================
+
+# Claves privadas y certificados PKI — NUNCA publicar en un repositorio
+# Contienen: ca_key.pem, publisher_key.pem, subscriber_key.pem,
+#            maincacert.pem, publisher_cert.pem, subscriber_cert.pem
+security/pki/
+
+# Documentos XML firmados con S/MIME (.p7s) — artefactos de construcción
+# Se regeneran ejecutando: bash generate_security_artifacts.sh
+security/signed/
+
+# Archivos intermedios de OpenSSL que pueden quedar en caso de error
+security/**/*.csr
+security/**/*.srl
+security/**/*.old

@@ -27,8 +27,10 @@
 
 #include "payloadSubscriber.h"
 #include "payloadPubSubTypes.h"
+#include "security/SecurityConfig.h"
 
 #include <chrono>
+#include <stdexcept>
 #include <iostream>
 #include <fstream>
 
@@ -60,11 +62,27 @@ payloadSubscriber::~payloadSubscriber()
     DomainParticipantFactory::get_instance()->delete_participant(participant_);
 }
 
-bool payloadSubscriber::init()
+bool payloadSubscriber::init(const std::string& escenario)
 {
     //CREATE THE PARTICIPANT
     DomainParticipantQos pqos;
     pqos.name("Participant_sub");
+
+    // ── Seguridad DDS-Security ─────────────────────────────────────────────────
+    // Inyecta los plugins PKI-DH, Access-Permissions y (si aplica) AES-GCM-GMAC
+    // en el QoS del participante ANTES de crearlo. FastDDS lee las propiedades
+    // durante la inicialización del participante y no acepta cambios posteriores.
+    // Con escenario="none" la función retorna sin modificar pqos.
+    try
+    {
+        security::configure_security_qos(pqos, escenario, "subscriber");
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return false;
+    }
+
     participant_ = DomainParticipantFactory::get_instance()->create_participant(0, pqos);
     if (participant_ == nullptr)
     {
