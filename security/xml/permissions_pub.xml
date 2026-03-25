@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================================
+  permissions_pub.xml — Permisos DDS-Security del PUBLICADOR
+  ============================================================================
+  Este documento define qué puede hacer el participante Publicador dentro del
+  dominio DDS. Es firmado por la CA (→ permissions_pub.p7s) y validado en
+  tiempo de ejecución por el plugin builtin.Access-Permissions.
+
+  Alcance por escenario:
+  ┌─────────────┬────────────────────────────────────────────────────────────┐
+  │ Escenario   │ Efecto de este archivo                                     │
+  ├─────────────┼────────────────────────────────────────────────────────────┤
+  │ auth        │ Solo valida el JOIN al dominio (topic-level: no aplica).   │
+  │ encrypt     │ Solo valida el JOIN al dominio (topic-level: no aplica).   │
+  │ access      │ Valida JOIN + que SOLO puede publicar en "payloadTopic".   │
+  └─────────────┴────────────────────────────────────────────────────────────┘
+
+  La diferencia entre escenarios es la gobernanza, no este archivo:
+  · gov_auth.xml / gov_encrypt.xml → enable_write_access_control = false
+  · gov_access.xml                 → enable_write_access_control = true  ← aplica aquí
+
+  NOTA: Los tópicos integrados de descubrimiento DDS (DCPSParticipants, etc.)
+  están exentos de comprobación de acceso por la especificación OMG DDS-Security
+  § 9.4.1 y por la implementación de FastDDS. No es necesario listarlos aquí.
+  ============================================================================
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_permissions.xsd">
+
+    <permissions>
+
+        <grant name="PublisherPermissions">
+
+            <!--
+                subject_name DEBE coincidir exactamente con el Subject del
+                certificado publisher_cert.pem generado por el script de PKI.
+                Formato RFC 2253 (orden inverso al slash-notation de OpenSSL):
+                  OpenSSL:   /C=ES/O=eProsima/CN=PayloadPublisher
+                  RFC 2253:  CN=PayloadPublisher, O=eProsima, C=ES
+            -->
+            <subject_name>CN=PayloadPublisher, O=eProsima, C=ES</subject_name>
+
+            <!--
+                Ventana de validez temporal. FastDDS comprueba que el instante
+                actual esté dentro de este rango en cada handshake de seguridad.
+                Ajusta not_after si el entorno de pruebas supera el año 2034.
+            -->
+            <validity>
+                <not_before>2024-01-01T00:00:00</not_before>
+                <not_after>2034-01-01T00:00:00</not_after>
+            </validity>
+
+            <!--
+                Regla de permiso: concede al Publicador:
+                  · Unirse al dominio 0         (siempre evaluado si enable_join_access_control=true)
+                  · Publicar en "payloadTopic"  (evaluado solo si enable_write_access_control=true)
+                  · No se incluye <subscribe>   (este participante no suscribe datos de usuario)
+            -->
+            <allow_rule>
+
+                <!-- Dominio DDS sobre el que aplica este permiso -->
+                <domains>
+                    <id>0</id>
+                </domains>
+
+                <!--
+                    Permiso de publicación: el Publicador ÚNICAMENTE puede
+                    escribir en el tópico "payloadTopic". Cualquier intento de
+                    publicar en otro tópico será denegado (escenario "access").
+                -->
+                <publish>
+                    <topics>
+                        <topic>payloadTopic</topic>
+                    </topics>
+                </publish>
+
+            </allow_rule>
+
+            <!--
+                Acción por defecto cuando ninguna regla allow/deny coincide.
+                DENY garantiza que el Publicador no puede hacer nada que no
+                esté explícitamente permitido arriba.
+            -->
+            <default>DENY</default>
+
+        </grant>
+
+    </permissions>
+
+</dds>

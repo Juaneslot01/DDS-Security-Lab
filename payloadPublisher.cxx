@@ -22,6 +22,7 @@
 
 #include "payloadPublisher.h"
 #include "payloadPubSubTypes.h"
+#include "security/SecurityConfig.h"
 
 #include <fastdds/dds/domain/DomainParticipantFactory.hpp>
 #include <fastdds/dds/publisher/Publisher.hpp>
@@ -29,6 +30,7 @@
 #include <fastdds/dds/publisher/DataWriter.hpp>
 #include <fastdds/dds/publisher/qos/DataWriterQos.hpp>
 
+#include <stdexcept>
 #include <thread>
 #include <chrono>
 
@@ -60,16 +62,39 @@ payloadPublisher::~payloadPublisher()
     DomainParticipantFactory::get_instance()->delete_participant(participant_);
 }
 
-bool payloadPublisher::init()
+bool payloadPublisher::init(const std::string& escenario)
 {
-    /* Initialize data_ here */
-
-    //CREATE THE PARTICIPANT
+    // -------------------------------------------------------------------------
+    // Configurar el QoS del DomainParticipant.
+    // Si el escenario es distinto de "none", configure_security_qos inyectará
+    // las propiedades de los plugins PKI-DH, Access-Permissions y AES-GCM-GMAC
+    // antes de que el participante sea creado por la factoría de FastDDS.
+    // Las propiedades de seguridad DEBEN estar presentes en el QoS en el momento
+    // de llamar a create_participant(); no pueden añadirse a posteriori.
+    // -------------------------------------------------------------------------
     DomainParticipantQos pqos;
     pqos.name("Participant_pub");
+
+    try
+    {
+        // Inyectar los plugins de seguridad según el escenario CLI.
+        // "publisher" indica qué certificado e identidad usar:
+        //   security/pki/publisher_cert.pem + security/pki/publisher_key.pem
+        security::configure_security_qos(pqos, escenario, "publisher");
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return false;
+    }
+
+    //CREATE THE PARTICIPANT
     participant_ = DomainParticipantFactory::get_instance()->create_participant(0, pqos);
     if (participant_ == nullptr)
     {
+        std::cerr << "[Publisher] Error al crear el DomainParticipant. "
+                  << "Verifica que los artefactos de seguridad existen y que "
+                  << "el binario se ejecuta desde la raíz del proyecto." << std::endl;
         return false;
     }
 
