@@ -16,7 +16,7 @@ resultados_recursos/
 .idea/
 .vscode/
 *.swp
-.venv/
+venv/
 
 # Archivos de CMake
 CMakeCache.txt
