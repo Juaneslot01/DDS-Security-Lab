@@ -14,7 +14,7 @@ command -v ssh >/dev/null 2>&1 || { echo "❌ Error: SSH no está instalado en e
 
 # --- CONFIGURACIÓN ---
 PI_USER="pi"
-PI_IP="192.168.20.53"
+PI_IP="192.168.20.49"
 DIR_PI="/home/pi/DDS-Security-Lab"   # Ruta del proyecto en la Pi
 DIR_PC=$(pwd)                        # Ruta actual en CachyOS
 
