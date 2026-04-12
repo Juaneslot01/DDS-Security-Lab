@@ -84,14 +84,10 @@ bool payloadSubscriber::init(const std::string& escenario)
         return false;
     }
 
-    participant_ = DomainParticipantFactory::get_instance()->create_participant(100, pqos);
+    participant_ = DomainParticipantFactory::get_instance()->create_participant(0, pqos);
     if (participant_ == nullptr)
     {
-        participant_ = DomainParticipantFactory::get_instance()->create_participant(0, pqos);
-        if (participant_ == nullptr) {
-            std::cerr << "❌ [Error] El participante no pudo ser creado en dominio 0 ni 100." << std::endl;
-            return false;
-        }
+        std::cerr << "❌ [Error] El participante no pudo ser creado en dominio 0." << std::endl;
         return false;
     }
 
