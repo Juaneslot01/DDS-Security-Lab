@@ -137,9 +137,17 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
     add_prop(pqos, "dds.sec.access.builtin.Access-Permissions.permissions", permissions);
 
     // 7. PLUGIN: Criptografía (AES-GCM-GMAC)
+    // Requerido para TODOS los escenarios con seguridad activa, no solo encrypt/access.
+    // El modo SIGN (usado en gov_auth.xml para discovery y liveliness) utiliza
+    // AES-GCM-GMAC en modo GMAC puro (autenticación sin cifrado), pero el plugin
+    // debe estar cargado para que FastDDS pueda firmar/verificar submensajes
+    // HEARTBEAT y ACKNACK. Sin él la sesión crypto no se establece y el intercambio
+    // de mensajes de control RTPS falla con "Cannot encrypt submessage".
+    add_prop(pqos, "dds.sec.crypto.plugin", "builtin.AES-GCM-GMAC");
     if (escenario == "encrypt" || escenario == "access") {
-        add_prop(pqos, "dds.sec.crypto.plugin", "builtin.AES-GCM-GMAC");
         std::cout << "   > Cifrado:   Activado (AES-GCM-256)\n";
+    } else {
+        std::cout << "   > Cifrado:   GMAC-only (firma sin cifrado)\n";
     }
 
     std::cout << "✅ [Security] Plugins inyectados correctamente.\n\n";
