@@ -61,6 +61,8 @@ for escenario in "${ESCENARIOS[@]}"; do
             # 2. Arrancar el Monitor de Recursos en la Pi
             ssh ${PI_USER}@${PI_IP} "nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!" > monitor.pid
 
+            ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher > /dev/null 2>&1"
+
             # 3. Arrancar Publicador en la Pi con timeout de 5 minutos
             ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --net=host --ipc=host dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${escenario}" || echo "⚠️ Alerta: Timeout o error en el nodo publicador."
 
