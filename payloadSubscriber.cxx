@@ -33,6 +33,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <thread>
 
 using namespace eprosima::fastdds::dds;
 
@@ -162,17 +163,27 @@ void payloadSubscriber::SubListener::on_data_available(
 
             // Salida limpia para tu CSV: SeqNum, PayloadSize, Latency(us)
             std::cout << st.sequence_number() << "," << st.data().size() << "," << latency_us << std::endl;
+
+            samples++;
         }
     }
 }
 
 void payloadSubscriber::run()
 {
-    std::cout << "[Subscriber] Esperando " << n_muestras << " muestras..." << std::endl;
+    // Definimos el límite según tu script (1000 calentamiento + 10000 medición)
+    uint32_t n_muestras = 11000;
 
-    while (listener.samples_received < n_muestras) {
+    std::cout << "[Subscriber] Listo. Escuchando en 'payloadTopic'..." << std::endl;
+    std::cout << "[Subscriber] Esperando " << n_muestras << " muestras para cerrar..." << std::endl;
+    std::cout << "[Subscriber] Salida CSV -> SeqNum,PayloadSize(bytes),Latency(us)" << std::endl;
+
+    // Usamos listener_.samples que es lo que definiste en el .h
+    while (listener_.samples < n_muestras)
+    {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    std::cout << "[Subscriber] Prueba completada." << std::endl;
+    std::cout << "[Subscriber] ¡Prueba completada con éxito!" << std::endl;
+    std::cout << "[Subscriber] Total recibidas: " << listener_.samples << std::endl;
 }
