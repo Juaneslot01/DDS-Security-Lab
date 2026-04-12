@@ -1,34 +1,179 @@
------BEGIN PKCS7-----
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha-256"; boundary="----726E4E77CAB94F60F222F8B7CDBFC192"
+
+This is an S/MIME signed message
+
+------726E4E77CAB94F60F222F8B7CDBFC192
+Content-Type: text/plain
+
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================================
+  permissions_sub.xml
+  ============================================================================
+  Documento de PERMISOS DDS-Security para el participante SUSCRIPTOR.
+
+  Este archivo define exactamente qué operaciones DDS puede realizar el nodo
+  cuyo certificado X.509 tiene el subject CN=PayloadSubscriber.
+
+  Ámbito de aplicación por escenario:
+  ─────────────────────────────────────────────────────────────────────────────
+  • auth    → El plugin de control de acceso CARGA este archivo para validar
+              que el suscriptor tiene permiso de unirse al dominio 0
+              (enable_join_access_control = true en gov_auth.xml).
+              Las restricciones por tópico NO se evalúan porque
+              enable_read_access_control = false en esa gobernanza.
+
+  • encrypt → Igual que auth: solo se valida el acceso al dominio.
+              El cifrado lo controla la gobernanza, no este archivo.
+
+  • access  → Aquí los permisos toman su máximo efecto. La gobernanza
+              gov_access.xml activa enable_read_access_control = true,
+              por lo que FastDDS verificará en tiempo real que este grant
+              autoriza la suscripción al tópico solicitado.
+              Solo se permitirá suscribirse a "payloadTopic". Cualquier
+              intento de suscripción a otro tópico de usuario será DENEGADO.
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Firma: Este archivo XML debe ser firmado con la clave privada de la CA
+  mediante el script generate_security_artifacts.sh para producir el archivo
+  security/signed/permissions_sub.p7s que carga FastDDS en ejecución.
+
+  NOTA sobre discovery: los tópicos built-in de RTPS (rtps_...Topic, etc.)
+  utilizados para el descubrimiento de participantes/endpoints están exentos
+  del control de acceso por la especificación DDS-Security y no necesitan
+  aparecer aquí.
+  ============================================================================
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_permissions.xsd">
+
+    <permissions>
+
+        <!--
+          ══════════════════════════════════════════════════════════════════════
+          Grant: SubscriberPermissions
+          ══════════════════════════════════════════════════════════════════════
+          Aplica al participante cuyo certificado tenga exactamente el subject:
+            CN=PayloadSubscriber, O=Uniandes, C=CO
+
+          Este subject DEBE coincidir (tras normalización RFC 2253) con el
+          campo Subject del certificado security/pki/subscriber_cert.pem
+          generado por generate_security_artifacts.sh con la opción:
+            -subj "/C=CO/O=Uniandes/CN=PayloadSubscriber"
+          ══════════════════════════════════════════════════════════════════════
+        -->
+        <grant name="SubscriberPermissions">
+
+            <!-- Identificador del participante al que aplica este grant.
+                 Debe ser el Distinguished Name (DN) en formato RFC 2253,
+                 que es el INVERSO del formato slash de OpenSSL. -->
+            <subject_name>CN=PayloadSubscriber, O=Uniandes, C=CO</subject_name>
+
+            <!--
+              Ventana de validez temporal.
+              FastDDS comprueba que el instante actual esté dentro de este
+              rango. Ajusta not_after a la fecha de fin de tus pruebas.
+              Formato: YYYY-MM-DDTHH:MM:SS  (ISO 8601, hora local o UTC)
+            -->
+            <validity>
+                <not_before>2024-01-01T00:00:00</not_before>
+                <not_after>2034-12-31T23:59:59</not_after>
+            </validity>
+
+            <!--
+              ────────────────────────────────────────────────────────────────
+              Regla de PERMISO (allow_rule)
+              ────────────────────────────────────────────────────────────────
+              Cuando la gobernanza activa el control de acceso, FastDDS busca
+              la primera regla que coincida con la operación solicitada.
+              Si coincide con un allow_rule → PERMITIDO.
+              Si no coincide con ninguna → se aplica <default>.
+              ────────────────────────────────────────────────────────────────
+            -->
+            <allow_rule>
+
+                <!-- Dominio DDS al que aplica esta regla.
+                     El publicador y suscriptor usan el dominio 0 (ver init()). -->
+                <domains>
+                    <id>0</id>
+                </domains>
+
+                <!--
+                  SUSCRIPCIONES PERMITIDAS
+                  ────────────────────────────────────────────────────────────
+                  Solo se autoriza la suscripción al tópico "payloadTopic",
+                  que es el único tópico de usuario que este nodo consume.
+
+                  Efecto por escenario:
+                    · auth / encrypt → esta sección es IGNORADA por la
+                      gobernanza (enable_read_access_control = false).
+                      El suscriptor puede unirse al dominio con este grant.
+                    · access         → esta sección se EVALÚA. El suscriptor
+                      solo podrá recibir datos de "payloadTopic". Si el
+                      DataReader intenta suscribirse a cualquier otro tópico
+                      de usuario, FastDDS lo rechazará.
+                  ────────────────────────────────────────────────────────────
+                -->
+                <subscribe>
+                    <topics>
+                        <topic>payloadTopic</topic>
+                    </topics>
+                </subscribe>
+
+            </allow_rule>
+
+            <!--
+              Acción por defecto para operaciones NO cubiertas por ninguna
+              allow_rule. DENY garantiza que el suscriptor no pueda publicar
+              ni suscribirse a tópicos distintos de los explícitamente
+              autorizados en el escenario "access".
+            -->
+            <default>DENY</default>
+
+        </grant>
+
+    </permissions>
+
+</dds>
+
+------726E4E77CAB94F60F222F8B7CDBFC192
+Content-Type: application/x-pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+
 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
-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
+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
-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
+MRUwEwYDVQQDDAxUZXNpcy1ERFMtQ0EwHhcNMjYwNDEyMTkxMjE5WhcNMzYwNDA5
+MTkxMjE5WjA3MQswCQYDVQQGEwJDTzERMA8GA1UECgwIVW5pYW5kZXMxFTATBgNV
 BAMMDFRlc2lzLUREUy1DQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-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
+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
-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
+MBMGA1UEAwwMVGVzaXMtRERTLUNBAhQ4gyEIcUsnUdT9daGZxEu8BEaiMzANBglg
 hkgBZQMEAgEFAKCB5DAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3
-DQEJBTEPFw0yNjA0MTIxODUxMzNaMC8GCSqGSIb3DQEJBDEiBCDsqGT8SJ8SPchf
+DQEJBTEPFw0yNjA0MTIxOTEyMTlaMC8GCSqGSIb3DQEJBDEiBCDsqGT8SJ8SPchf
 Ns8SAS5WJ+UFJO0gj7xkAwlEMKpkojB5BgkqhkiG9w0BCQ8xbDBqMAsGCWCGSAFl
 AwQBKjALBglghkgBZQMEARYwCwYJYIZIAWUDBAECMAoGCCqGSIb3DQMHMA4GCCqG
 SIb3DQMCAgIAgDANBggqhkiG9w0DAgIBQDAHBgUrDgMCBzANBggqhkiG9w0DAgIB
-KDANBgkqhkiG9w0BAQEFAASCAQCaML5ne7741vgyNN5/GonobFoBb/pmEoxKsoIh
-Cb1vI1XlKGiDIAPaGRLsnp+qtUCv0k+zbKeNX4OmYfpNiCOB+L0AUVw/YinTXU+X
-FflUMqqT0BUY1p9jENWxltYR0Xlc26xGxS2+nYfdX8179mLvxvtQFzQS5U243q8Q
-Bt2ijnz4ZmnbyRwTI+eHLMYZNUPqxYGA/8qWeDWFcEdHSPGbRzt+j6bFab4JBDyA
-l7/yZDy0GpDOyEsanQ5SeaHYq5/H795X2fg+X6+vHu9CeDnZhtGtV0qN0RD/dM5O
-XJToEGGg3AhxnLyobnCuOnKgGr7puLlv+ogaCBE5WInDokol
------END PKCS7-----
+KDANBgkqhkiG9w0BAQEFAASCAQBJ2wBilsgyR0++K+U+KoM2j8dAM6A8ruJId/y1
+mZgiewTBjBLRPUxvitQ5+ld8fTki/mg7W4b1LMVMsbbTc8xu421ZGL/yYrKriNEG
+R/FFD0OeXMZMUs4rD0Sy0yob/Fantw6BYqpXZhHy/iwovUfRtRMCokYjYSPGAMBw
+jCoMVIrFqe/UsRPinp/gs8juT9pBZs0ytQziuv6B5NtoLQ4d44Mu0fvF0eBUo9hM
+v20l074dUc2/SXhm9LIUKSJFlqg4RCOhNMj1g1y7njZf3+JK4E/JMXEZ1XwnO3eO
+cAiJtPQNcASxmL5mvJhom8xxiwgjAdy5Cv4IlYlVLzL4FODM
+
+------726E4E77CAB94F60F222F8B7CDBFC192--
+

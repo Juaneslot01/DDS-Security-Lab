@@ -1,34 +1,140 @@
------BEGIN PKCS7-----
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha-256"; boundary="----50E15919AC8A56AB20BE562FB979D577"
+
+This is an S/MIME signed message
+
+------50E15919AC8A56AB20BE562FB979D577
+Content-Type: text/plain
+
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================================
+  permissions_pub.xml — Permisos DDS-Security del PUBLICADOR
+  ============================================================================
+  Este documento define qué puede hacer el participante Publicador dentro del
+  dominio DDS. Es firmado por la CA (→ permissions_pub.p7s) y validado en
+  tiempo de ejecución por el plugin builtin.Access-Permissions.
+
+  Alcance por escenario:
+  ┌─────────────┬────────────────────────────────────────────────────────────┐
+  │ Escenario   │ Efecto de este archivo                                     │
+  ├─────────────┼────────────────────────────────────────────────────────────┤
+  │ auth        │ Solo valida el JOIN al dominio (topic-level: no aplica).   │
+  │ encrypt     │ Solo valida el JOIN al dominio (topic-level: no aplica).   │
+  │ access      │ Valida JOIN + que SOLO puede publicar en "payloadTopic".   │
+  └─────────────┴────────────────────────────────────────────────────────────┘
+
+  La diferencia entre escenarios es la gobernanza, no este archivo:
+  · gov_auth.xml / gov_encrypt.xml → enable_write_access_control = false
+  · gov_access.xml                 → enable_write_access_control = true  ← aplica aquí
+
+  NOTA: Los tópicos integrados de descubrimiento DDS (DCPSParticipants, etc.)
+  están exentos de comprobación de acceso por la especificación OMG DDS-Security
+  § 9.4.1 y por la implementación de FastDDS. No es necesario listarlos aquí.
+  ============================================================================
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_permissions.xsd">
+
+    <permissions>
+
+        <grant name="PublisherPermissions">
+
+            <!--
+                subject_name DEBE coincidir exactamente con el Subject del
+                certificado publisher_cert.pem generado por el script de PKI.
+                Formato RFC 2253 (orden inverso al slash-notation de OpenSSL):
+                  OpenSSL:   /C=CO/O=Uniandes/CN=PayloadPublisher
+                  RFC 2253:  CN=PayloadPublisher, O=Uniandes, C=CO
+            -->
+            <subject_name>CN=PayloadPublisher, O=Uniandes, C=CO</subject_name>
+
+            <!--
+                Ventana de validez temporal. FastDDS comprueba que el instante
+                actual esté dentro de este rango en cada handshake de seguridad.
+                Ajusta not_after si el entorno de pruebas supera el año 2034.
+            -->
+            <validity>
+                <not_before>2024-01-01T00:00:00</not_before>
+                <not_after>2034-01-01T00:00:00</not_after>
+            </validity>
+
+            <!--
+                Regla de permiso: concede al Publicador:
+                  · Unirse al dominio 0         (siempre evaluado si enable_join_access_control=true)
+                  · Publicar en "payloadTopic"  (evaluado solo si enable_write_access_control=true)
+                  · No se incluye <subscribe>   (este participante no suscribe datos de usuario)
+            -->
+            <allow_rule>
+
+                <!-- Dominio DDS sobre el que aplica este permiso -->
+                <domains>
+                    <id>0</id>
+                </domains>
+
+                <!--
+                    Permiso de publicación: el Publicador ÚNICAMENTE puede
+                    escribir en el tópico "payloadTopic". Cualquier intento de
+                    publicar en otro tópico será denegado (escenario "access").
+                -->
+                <publish>
+                    <topics>
+                        <topic>payloadTopic</topic>
+                    </topics>
+                </publish>
+
+            </allow_rule>
+
+            <!--
+                Acción por defecto cuando ninguna regla allow/deny coincide.
+                DENY garantiza que el Publicador no puede hacer nada que no
+                esté explícitamente permitido arriba.
+            -->
+            <default>DENY</default>
+
+        </grant>
+
+    </permissions>
+
+</dds>
+
+------50E15919AC8A56AB20BE562FB979D577
+Content-Type: application/x-pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+
 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
-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
+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
-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
+MRUwEwYDVQQDDAxUZXNpcy1ERFMtQ0EwHhcNMjYwNDEyMTkxMjE5WhcNMzYwNDA5
+MTkxMjE5WjA3MQswCQYDVQQGEwJDTzERMA8GA1UECgwIVW5pYW5kZXMxFTATBgNV
 BAMMDFRlc2lzLUREUy1DQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
-ANHFVOH3+ebMkZ2RidziZIB4jzNvX7C/0JJTYRFg4NkPkW4pHoCyHz7FUfAol9C6
-38C6kknr4wjr5XKSatFzUt8SGHeoW+0HIWmYZXO45dsF/NLEphJOeSaai20BCK1J
-IAC3YMV2CV0mEADqx+QmmTw2GoYKzyM9tfpfkuJJ8gjzMSn9uSnBU8dikTc5jueo
-lbnVvTE69E22hhlGM6Go1N/qvFH24NTCeUgbboeINKw4oja8Eo/o3awiWzHTAIgP
-OdO3Ys7m2XJGExC7w/pU+fLJXzsV6dot06GkvtsyQcQQxYV6qg3wHc+Xbj4N+o7E
-NUZ8IgHOSWzeHjRiM3sxEmMCAwEAAaNTMFEwHQYDVR0OBBYEFMcTI0iPMtoamvoc
-MiiJexobZhPwMB8GA1UdIwQYMBaAFMcTI0iPMtoamvocMiiJexobZhPwMA8GA1Ud
-EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAIphkFt6TZ/VlnFWKsvl/1zb
-UGzbwZuuOzpb1YJnEImATTX1+kkHLQuyoXv5j7gobFPoHnuSG89CjrlpaZ/ysd+F
-+e0TpcqoR+OtwYr2S9c4gQ0zyQ2V6L60JPLD55p+rS6FWwjMkZLatVPL7fCzk4kE
-LVuNlOtM9zft3wibsBWYPa5GVVweRZRFvPiYSRo80TIYmK3Myoy3Yjg07iWtNJwx
-Dslhk8Xe8bBLejQ5OQXtJa6Qb3htcTg3Gcy0Zr2FeoqslioS949+XTLZTzXxeT2h
-tet9/L696pZGGpNJuaelFd3uRiMgUFpAf0+kNL1z4ppWsvhwSijyq7NLO+RspLUx
+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
-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
+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
 hkgBZQMEAgEFAKCB5DAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3
-DQEJBTEPFw0yNjA0MTIxODUxMzNaMC8GCSqGSIb3DQEJBDEiBCBim5HCi1yIRYuE
+DQEJBTEPFw0yNjA0MTIxOTEyMTlaMC8GCSqGSIb3DQEJBDEiBCBim5HCi1yIRYuE
 GjbdRgY5DyxBQMFKZSOwS7rWnpru1jB5BgkqhkiG9w0BCQ8xbDBqMAsGCWCGSAFl
 AwQBKjALBglghkgBZQMEARYwCwYJYIZIAWUDBAECMAoGCCqGSIb3DQMHMA4GCCqG
 SIb3DQMCAgIAgDANBggqhkiG9w0DAgIBQDAHBgUrDgMCBzANBggqhkiG9w0DAgIB
-KDANBgkqhkiG9w0BAQEFAASCAQBlB5xlpYamBIGMVS1mOGHSt+NBKbjhROxoDUgP
-jkx4ez9cTFenydv9SHVxEoKVUpX2E4vXvVBDrtCDmfZx0ulILzVA3W2tLWg+zkbh
-QTRjdzaDXgygPTs/5HKlzoq9l9RfudCPlpG1hFrgTytu0Golxzkjlv69eZSxNGgw
-aYw1S+vlz/sO6MWphJLyl9+TxngGge1tLP9phkumibqh1mORqdwvCUB61weQaREq
-0eh67iJ6K5qRBgPWxFDDgivqEzL++wCyeuvN4P71sdm5LjJXtK3ApW+ypr7TE29n
-5uDTY8RvkAe0KCmbJz1rrG7VPqWMW3QJ7w712T+scdUbGZDf
------END PKCS7-----
+KDANBgkqhkiG9w0BAQEFAASCAQANYgDHoaRtmwbyJPYtQb8OX/W8mHWOngitrQ9E
+Vo9H17eiewERuZISHCC4dlukY3k8UYYxoa6+aA/L9hprImDhvVoMpkWyseCC3V0H
+wvmtCqLNbX8em+DrbGbgK4HWCFYI6uV3VchCc4aXlOKZu5FyOERmGVnXlmbaOIbf
+Ae/0b/WIA6Oi+NgSoGMmZFlzUci1a9Jrhw97eZFTUqbplu7iLuSffGuhT1EEEid2
+CAqiOdiOvcpbNU5qH5sMILOpwZLI2qW4RTu5U1Mqdpps4udkKHZnDAof2R6hDo33
+ROGG4w9MbsjEcdO1AK8rdIwZqJjt2XitlrMeQnFzOMqf9IEE
+
+------50E15919AC8A56AB20BE562FB979D577--
+

@@ -1,34 +1,169 @@
------BEGIN PKCS7-----
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha-256"; boundary="----8EE688805BB33C48DBF61D5E48AD06B0"
+
+This is an S/MIME signed message
+
+------8EE688805BB33C48DBF61D5E48AD06B0
+Content-Type: text/plain
+
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+================================================================================
+  gov_auth.xml  —  Gobernanza DDS-Security: Escenario "auth"
+================================================================================
+  PROPÓSITO:
+    Exigir autenticación mutua entre todos los participantes DDS del dominio 0
+    sin aplicar ningún tipo de cifrado en los datos ni en el transporte RTPS.
+
+  COMPORTAMIENTO EN TIEMPO DE EJECUCIÓN:
+    ✔  Solo participantes con certificado X.509 válido (firmado por la CA)
+       pueden unirse al dominio.
+    ✔  Los mensajes de descubrimiento (PDP/EDP) se firman (SIGN) para
+       garantizar su integridad, pero NO se cifran.
+    ✔  Los datos de usuario viajan en texto plano sobre RTPS.
+    ✘  No se controla qué tópicos puede publicar o leer cada participante
+       (enable_write_access_control y enable_read_access_control = false).
+       El control de tópicos se activa únicamente en el escenario "access".
+
+  ARCHIVOS RELACIONADOS:
+    • permissions_pub.xml / permissions_pub.p7s  → permisos del Publicador
+    • permissions_sub.xml / permissions_sub.p7s  → permisos del Suscriptor
+    • SecurityConfig.cxx  → carga este archivo como "gov_auth.p7s"
+
+  REFERENCIA OMG:
+    DDS Security v1.1 — Sección 9.4.1.2 (Governance document)
+================================================================================
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://www.omg.org/spec/DDS-SECURITY/20170901/omg_shared_ca_governance.xsd">
+
+    <domain_access_rules>
+
+        <!-- ─────────────────────────────────────────────────────────────────
+             Regla de dominio: aplica al dominio DDS 0
+             ───────────────────────────────────────────────────────────────── -->
+        <domain_rule>
+
+            <!-- Dominio al que aplica esta regla -->
+            <domains>
+                <id>0</id>
+            </domains>
+
+            <!-- ── AUTENTICACIÓN ──────────────────────────────────────────
+                 false → ningún participante anónimo puede unirse al dominio.
+                 Todos deben presentar un certificado X.509 válido firmado
+                 por la CA configurada en el plugin PKI-DH.
+            ─────────────────────────────────────────────────────────────── -->
+            <allow_unauthenticated_participants>false</allow_unauthenticated_participants>
+
+            <!-- ── CONTROL DE ACCESO AL DOMINIO ─────────────────────────
+                 true → los participantes autenticados también deben tener
+                 un documento de permisos (.p7s) válido que les autorice a
+                 unirse a este dominio. Activa el plugin Access-Permissions.
+            ─────────────────────────────────────────────────────────────── -->
+            <enable_join_access_control>true</enable_join_access_control>
+
+            <!-- ── PROTECCIÓN DEL DESCUBRIMIENTO (PDP/EDP) ──────────────
+                 SIGN → los mensajes de descubrimiento se firman digitalmente
+                 para garantizar su integridad y autenticidad, pero NO se
+                 cifran. Un atacante puede ver los metadatos, pero no
+                 modificarlos sin que la firma falle.
+            ─────────────────────────────────────────────────────────────── -->
+            <discovery_protection_kind>SIGN</discovery_protection_kind>
+
+            <!-- ── PROTECCIÓN DE LIVELINESS ──────────────────────────────
+                 SIGN → los mensajes de liveliness se firman para evitar
+                 suplantación, sin coste de cifrado.
+            ─────────────────────────────────────────────────────────────── -->
+            <liveliness_protection_kind>SIGN</liveliness_protection_kind>
+
+            <!-- ── PROTECCIÓN RTPS (nivel de transporte) ─────────────────
+                 NONE → los paquetes RTPS viajan SIN cifrado.
+                 Este es el parámetro clave que diferencia "auth" de "encrypt".
+            ─────────────────────────────────────────────────────────────── -->
+            <rtps_protection_kind>NONE</rtps_protection_kind>
+
+            <!-- ─────────────────────────────────────────────────────────
+                 Reglas por tópico: aplica a todos los tópicos ("*")
+            ────────────────────────────────────────────────────────────── -->
+            <topic_access_rules>
+                <topic_rule>
+
+                    <!-- Expresión glob: esta regla aplica a TODOS los tópicos -->
+                    <topic_expression>*</topic_expression>
+
+                    <!-- Aplicar la protección de descubrimiento definida arriba
+                         también a los anuncios de endpoints de tópicos (EDP). -->
+                    <enable_discovery_protection>true</enable_discovery_protection>
+
+                    <!-- Sin protección de liveliness a nivel de tópico -->
+                    <enable_liveliness_protection>false</enable_liveliness_protection>
+
+                    <!-- ── SIN CONTROL DE ACCESO POR TÓPICO ─────────────
+                         false → el plugin Access-Permissions NO comprueba si
+                         el participante tiene permiso para leer o escribir
+                         en cada tópico. Cualquier participante autenticado
+                         y que tenga permiso de dominio puede publicar y
+                         suscribirse libremente.
+                         Activar estas flags es la diferencia entre "encrypt"
+                         y el escenario "access".
+                    ───────────────────────────────────────────────────── -->
+                    <enable_read_access_control>false</enable_read_access_control>
+                    <enable_write_access_control>false</enable_write_access_control>
+
+                    <!-- ── SIN CIFRADO DE METADATOS NI DATOS ────────────
+                         Los submensajes RTPS (metadata) y el payload de
+                         usuario viajan en texto plano.
+                    ───────────────────────────────────────────────────── -->
+                    <metadata_protection_kind>NONE</metadata_protection_kind>
+                    <data_protection_kind>NONE</data_protection_kind>
+
+                </topic_rule>
+            </topic_access_rules>
+
+        </domain_rule>
+
+    </domain_access_rules>
+
+</dds>
+
+------8EE688805BB33C48DBF61D5E48AD06B0
+Content-Type: application/x-pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+
 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
-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
+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
-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
+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
-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
+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
-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
+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
 hkgBZQMEAgEFAKCB5DAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3
-DQEJBTEPFw0yNjA0MTIxODUxMzNaMC8GCSqGSIb3DQEJBDEiBCAtR1HzpAEVndTS
+DQEJBTEPFw0yNjA0MTIxOTEyMTlaMC8GCSqGSIb3DQEJBDEiBCAtR1HzpAEVndTS
 MR3Y0Ku0aEEb2nC5HzjT1dynGG7FfDB5BgkqhkiG9w0BCQ8xbDBqMAsGCWCGSAFl
 AwQBKjALBglghkgBZQMEARYwCwYJYIZIAWUDBAECMAoGCCqGSIb3DQMHMA4GCCqG
 SIb3DQMCAgIAgDANBggqhkiG9w0DAgIBQDAHBgUrDgMCBzANBggqhkiG9w0DAgIB
-KDANBgkqhkiG9w0BAQEFAASCAQBSLsaPfUu1aIskwA/H1uaDV3YxYaqgGbOb8PC8
-AF9F7zYgty6espdcbkESK7IOQPAVhd01duZEcbVQk2wXDUlUviGJ/qzMcFWUu24T
-oBZ0LBlfgKe4hVUQyt1pOa+QTwV1Fq15cXtRwEy29c1ji4zDZWjL8JtnDDd5XqAR
-Mv507FOE5mZepKkFjLlhqbmnKlkk8dKiHbrbCAMNgRrjP2EPw1tr8C/fXxUkHu1h
-XERVCx5hg/vUhyFVCsctx7WLQrTn/OUjydY2CHWP6jGrnul7+XuuXgCCiELx7OgV
-Ehj83H6AiSj6n6PtEnZWxcx/zu3vDWaxHJdt5oSDWhiws3Rr
------END PKCS7-----
+KDANBgkqhkiG9w0BAQEFAASCAQCSQGwf8LH/U8q/U3h+lO9ENaDWan3JTWywes8H
+1yOYKqK8GI7LtumeN0jVuYz1XAQ0kf0S3QP1QGXMPm86K1fSy+KSPc44MwZR5Y8I
+YgvS2z9EyfKCU7/w0WlCkkQ95GsIXPuQXrNzFGVtd5B89femNsVGyOtrSTeb75o7
+zofgrmTDnXWM5ENMdoyFzSwMZBVWrMrp5TWpep0dWcj0ppr0SwAYJh/C4ZC91Xql
+twLIwsx6ZDDaIVzbPE4oam/jYsr1WmwQbO78t3olpZvnf+iTT9uLdUtZSta+H1hD
+h7i7Jl4DriiKqQuIRnK/xnVb/4xjKJcmPQp/QygT07eaqRnO
+
+------8EE688805BB33C48DBF61D5E48AD06B0--
+
