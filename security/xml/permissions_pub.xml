@@ -36,10 +36,10 @@
                 subject_name DEBE coincidir exactamente con el Subject del
                 certificado publisher_cert.pem generado por el script de PKI.
                 Formato RFC 2253 (orden inverso al slash-notation de OpenSSL):
-                  OpenSSL:   /C=ES/O=eProsima/CN=PayloadPublisher
-                  RFC 2253:  CN=PayloadPublisher, O=eProsima, C=ES
+                  OpenSSL:   /C=CO/O=Uniandes/CN=PayloadPublisher
+                  RFC 2253:  CN=PayloadPublisher, O=Uniandes, C=CO
             -->
-            <subject_name>CN=PayloadPublisher, O=eProsima, C=ES</subject_name>
+            <subject_name>CN=PayloadPublisher, O=Uniandes, C=CO</subject_name>
 
             <!--
                 Ventana de validez temporal. FastDDS comprueba que el instante

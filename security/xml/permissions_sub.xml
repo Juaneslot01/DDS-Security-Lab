@@ -47,12 +47,12 @@
           Grant: SubscriberPermissions
           ══════════════════════════════════════════════════════════════════════
           Aplica al participante cuyo certificado tenga exactamente el subject:
-            CN=PayloadSubscriber, O=eProsima, C=ES
+            CN=PayloadSubscriber, O=Uniandes, C=CO
 
           Este subject DEBE coincidir (tras normalización RFC 2253) con el
           campo Subject del certificado security/pki/subscriber_cert.pem
           generado por generate_security_artifacts.sh con la opción:
-            -subj "/C=ES/O=eProsima/CN=PayloadSubscriber"
+            -subj "/C=CO/O=Uniandes/CN=PayloadSubscriber"
           ══════════════════════════════════════════════════════════════════════
         -->
         <grant name="SubscriberPermissions">
@@ -60,7 +60,7 @@
             <!-- Identificador del participante al que aplica este grant.
                  Debe ser el Distinguished Name (DN) en formato RFC 2253,
                  que es el INVERSO del formato slash de OpenSSL. -->
-            <subject_name>CN=PayloadSubscriber, O=eProsima, C=ES</subject_name>
+            <subject_name>CN=PayloadSubscriber, O=Uniandes, C=CO</subject_name>
 
             <!--
               Ventana de validez temporal.
