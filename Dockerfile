@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 2. OPTIMIZACIÓN DE CAPAS: Combinamos herramientas base, repo ROS 2 y FastDDS
 # Se usa --no-install-recommends para evitar paquetes innecesarios y rm -rf para limpiar
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     curl \
     gnupg2 \
     lsb-release \
