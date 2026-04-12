@@ -75,7 +75,7 @@ done
 # --- 4. Firma de Gobernanza ---
 step "4/5" "Firmando documentos de Gobernanza (S/MIME)..."
 for GOV in gov_auth gov_encrypt gov_access; do
-    openssl smime -sign -text -outform PEM \
+    openssl smime -sign -text \
         -in      "${XML_DIR}/${GOV}.xml" \
         -signer  "${PKI_DIR}/maincacert.pem" \
         -inkey   "${PKI_DIR}/ca_key.pem" \
@@ -86,7 +86,7 @@ done
 # --- 5. Firma de Permisos ---
 step "5/5" "Firmando documentos de Permisos (S/MIME)..."
 for PERM in permissions_pub permissions_sub; do
-    openssl smime -sign -text -outform PEM \
+    openssl smime -sign -text \
         -in      "${XML_DIR}/${PERM}.xml" \
         -signer  "${PKI_DIR}/maincacert.pem" \
         -inkey   "${PKI_DIR}/ca_key.pem" \
