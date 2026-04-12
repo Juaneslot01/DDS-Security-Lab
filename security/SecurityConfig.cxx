@@ -2,7 +2,7 @@
 // SecurityConfig.cxx
 //
 // Implementación de la configuración de seguridad para FastDDS.
-// Incluye validación preventiva de artefactos para evitar fallos de segmentación.
+// Corregido para rutas absolutas en entornos Docker (file:///app/security).
 //
 // Compatible con: eProsima FastDDS 2.x
 // Estándar:       OMG DDS Security v1.1
@@ -16,6 +16,8 @@
 #include <vector>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <chrono>
 
 namespace security {
 
@@ -25,7 +27,6 @@ namespace security {
 
 /**
  * Verifica la existencia física de un archivo en el sistema.
- * Evita que FastDDS intente cargar punteros nulos al no encontrar certificados.
  */
 static bool file_exists(const std::string& name) {
     struct stat buffer;
@@ -33,10 +34,14 @@ static bool file_exists(const std::string& name) {
 }
 
 /**
- * Construye un URI con esquema "file://" compatible con el parser de FastDDS.
+ * Construye un URI con esquema "file://" usando rutas ABSOLUTAS.
+ * Crucial para que el motor de OpenSSL no confunda la ruta con un nombre de host.
+ * Resultado esperado: file:///app/security/...
  */
 static std::string make_file_uri(const std::string& base_dir, const std::string& filename) {
-    return "file://" + base_dir + "/" + filename;
+    // Aseguramos que la base_dir sea absoluta (empiece con /)
+    std::string absolute_path = (base_dir[0] == '/') ? base_dir : "/" + base_dir;
+    return "file://" + absolute_path + "/" + filename;
 }
 
 /**
@@ -62,7 +67,7 @@ bool validate_artifacts(const std::string& escenario,
     const std::string signed_dir = security_dir + "/signed";
     const std::string perm_suffix = (rol == "publisher") ? "pub" : "sub";
 
-    // Lista de archivos que DEBEN existir para que el escenario sea válido
+    // Lista de archivos según la estructura verificada por 'ls -R'
     std::vector<std::string> critical_files = {
         pki_dir + "/maincacert.pem",
         pki_dir + "/" + rol + "_cert.pem",
@@ -93,14 +98,17 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
         return;
     }
 
-    // 2. Validación preventiva (Crucial para estabilidad en Docker/Raspberry)
-    if (!validate_artifacts(escenario, rol, security_dir)) {
-        throw std::runtime_error("❌ [Security Failure] Faltan artefactos criptográficos necesarios.");
+    // Ajuste de ruta para entorno Docker: Si recibe "security", lo convertimos en ruta absoluta
+    std::string effective_dir = (security_dir == "security") ? "/app/security" : security_dir;
+
+    // 2. Validación preventiva (Crucial para estabilidad en la Raspberry)
+    if (!validate_artifacts(escenario, rol, effective_dir)) {
+        throw std::runtime_error("❌ [Security Failure] Faltan artefactos en: " + effective_dir);
     }
 
-    // 3. Preparación de rutas URI
-    const std::string pki_dir    = security_dir + "/pki";
-    const std::string signed_dir = security_dir + "/signed";
+    // 3. Preparación de rutas URI (file:///app/security/...)
+    const std::string pki_dir    = effective_dir + "/pki";
+    const std::string signed_dir = effective_dir + "/signed";
     const std::string perm_suffix = (rol == "publisher") ? "pub" : "sub";
 
     const std::string ca_cert     = make_file_uri(pki_dir, "maincacert.pem");
@@ -109,11 +117,12 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
     const std::string governance  = make_file_uri(signed_dir, "gov_" + escenario + ".p7s");
     const std::string permissions = make_file_uri(signed_dir, "permissions_" + perm_suffix + ".p7s");
 
-    // 4. Logging de diagnóstico (útil para auditoría de la tesis)
+    // 4. Logging de diagnóstico
     std::cout << "🔒 [Security] Configurando Participante DDS:\n"
               << "   > Escenario: " << escenario << "\n"
               << "   > Rol:       " << rol << "\n"
-              << "   > CA:        " << ca_cert << "\n";
+              << "   > CA Path:   " << ca_cert << "\n"
+              << "   > Gov Path:  " << governance << "\n";
 
     // 5. PLUGIN: Autenticación (PKI-DH)
     add_prop(pqos, "dds.sec.auth.plugin", "builtin.PKI-DH");
@@ -127,7 +136,7 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
     add_prop(pqos, "dds.sec.access.builtin.Access-Permissions.governance", governance);
     add_prop(pqos, "dds.sec.access.builtin.Access-Permissions.permissions", permissions);
 
-    // 7. PLUGIN: Criptografía (Solo si el escenario lo requiere)
+    // 7. PLUGIN: Criptografía (AES-GCM-GMAC)
     if (escenario == "encrypt" || escenario == "access") {
         add_prop(pqos, "dds.sec.crypto.plugin", "builtin.AES-GCM-GMAC");
         std::cout << "   > Cifrado:   Activado (AES-GCM-256)\n";
