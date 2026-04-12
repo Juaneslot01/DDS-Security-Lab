@@ -3,6 +3,20 @@
 #  generate_security_artifacts.sh
 #  Generador de infraestructura PKI y S/MIME para el laboratorio DDS-Security.
 #  Configurado para RSA-2048 para consistencia en mediciones de rendimiento.
+#
+#  Comportamiento de idempotencia:
+#    · Si maincacert.pem y ca_key.pem ya existen, la CA NO se regenera.
+#    · Si {rol}_cert.pem y {rol}_key.pem ya existen, ese certificado NO se
+#      regenera.
+#    · Los archivos .p7s (gobernanza y permisos) SIEMPRE se re-firman, porque
+#      dependen de los XMLs que pueden haber cambiado.
+#
+#  Esto permite compartir la misma PKI entre dos máquinas (PC + Raspberry Pi):
+#    1. Generar en el PC:  bash generate_security_artifacts.sh
+#    2. Sincronizar:       rsync -av security/pki/ pi@<IP>:<DIR>/security/pki/
+#    3. Construir en Pi:   docker build -t dds-lab .
+#       → El script detecta los .pem copiados y no genera una CA nueva.
+#       → Ambas imágenes comparten la misma CA → autenticación DDS-Security OK.
 # ==============================================================================
 
 set -euo pipefail
@@ -21,6 +35,7 @@ fi
 
 step() { echo -e "\n${BOLD}${CYAN}[PASO $1]${NC} $2"; }
 ok()   { echo -e "  ${GREEN}✔${NC}  $*"; }
+info() { echo -e "  ${YELLOW}ℹ${NC}  $*"; }
 fatal(){ echo -e "\n${RED}[ERROR]${NC} $*" >&2; exit 1; }
 
 # --- Rutas del Proyecto ---
@@ -41,18 +56,28 @@ for xml in "${REQUIRED_XMLS[@]}"; do
 done
 
 # --- 1. Autoridad Certificadora (CA) ---
-step "1/5" "Generando CA raíz (RSA-2048)..."
-openssl req -nodes -x509 -days 3650 -newkey rsa:2048 \
-    -keyout "${PKI_DIR}/ca_key.pem" \
-    -out    "${PKI_DIR}/maincacert.pem" \
-    -subj   "/C=CO/O=Uniandes/CN=Tesis-DDS-CA" 2>/dev/null
-echo "01" > "${PKI_DIR}/ca_serial.txt"
-ok "CA generada: maincacert.pem"
+step "1/5" "CA raíz (RSA-2048)..."
+if [[ -f "${PKI_DIR}/maincacert.pem" && -f "${PKI_DIR}/ca_key.pem" ]]; then
+    info "CA existente detectada — reutilizando maincacert.pem y ca_key.pem (no se genera una nueva)."
+    info "Verifica que ambas máquinas comparten esta misma CA para que la autenticación DDS funcione."
+else
+    openssl req -nodes -x509 -days 3650 -newkey rsa:2048 \
+        -keyout "${PKI_DIR}/ca_key.pem" \
+        -out    "${PKI_DIR}/maincacert.pem" \
+        -subj   "/C=CO/O=Uniandes/CN=Tesis-DDS-CA" 2>/dev/null
+    echo "01" > "${PKI_DIR}/ca_serial.txt"
+    ok "CA generada: maincacert.pem"
+fi
 
 # --- 2 & 3. Certificados para Nodos (Publicador y Suscriptor) ---
 for ROL in publisher subscriber; do
     CN_VAL=$( [[ "$ROL" == "publisher" ]] && echo "PayloadPublisher" || echo "PayloadSubscriber" )
-    step "2-3/5" "Generando certificado para $ROL (RSA-2048)..."
+    step "2-3/5" "Certificado para $ROL (RSA-2048)..."
+
+    if [[ -f "${PKI_DIR}/${ROL}_cert.pem" && -f "${PKI_DIR}/${ROL}_key.pem" ]]; then
+        info "Certificados de $ROL existentes — reutilizando ${ROL}_cert.pem y ${ROL}_key.pem."
+        continue
+    fi
 
     # Generar clave y CSR
     openssl req -nodes -newkey rsa:2048 \
@@ -72,7 +97,7 @@ for ROL in publisher subscriber; do
     ok "$ROL: ${ROL}_cert.pem y ${ROL}_key.pem listos."
 done
 
-# --- 4. Firma de Gobernanza ---
+# --- 4. Firma de Gobernanza (siempre se re-firma con la CA activa) ---
 step "4/5" "Firmando documentos de Gobernanza (S/MIME)..."
 for GOV in gov_auth gov_encrypt gov_access; do
     openssl smime -sign -text \
@@ -83,7 +108,7 @@ for GOV in gov_auth gov_encrypt gov_access; do
     ok "${GOV}.p7s generado."
 done
 
-# --- 5. Firma de Permisos ---
+# --- 5. Firma de Permisos (siempre se re-firma con la CA activa) ---
 step "5/5" "Firmando documentos de Permisos (S/MIME)..."
 for PERM in permissions_pub permissions_sub; do
     openssl smime -sign -text \
