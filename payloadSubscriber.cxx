@@ -168,7 +168,11 @@ void payloadSubscriber::SubListener::on_data_available(
 
 void payloadSubscriber::run()
 {
-    std::cout << "Waiting for Data, press Enter to stop the DataReader. " << std::endl;
-    std::cin.ignore();
-    std::cout << "Shutting down the Subscriber." << std::endl;
+    std::cout << "[Subscriber] Esperando " << n_muestras << " muestras..." << std::endl;
+
+    while (listener.samples_received < n_muestras) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    std::cout << "[Subscriber] Prueba completada." << std::endl;
 }
