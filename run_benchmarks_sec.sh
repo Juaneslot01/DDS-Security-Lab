@@ -39,15 +39,17 @@ for escenario in "${ESCENARIOS[@]}"; do
             CSV_LATENCIA="${DIR_PC}/resultados_latencia/Latencia_${escenario}_${payload}B_run${i}.csv"
             CSV_RECURSOS="${DIR_PI}/resultados_recursos/Recursos_${escenario}_${payload}B_run${i}.csv"
 
+            # 0. Limpieza preventiva de contenedor publicador anterior en la Pi
+            ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher 2>/dev/null || true"
+
             # 1. Arrancar Suscriptor en el PC (-w /app es la clave para los certificados)
             timeout 300 docker run --rm --net=host --ipc=host -w /app \
-                dds-lab ./build/payload subscriber ${escenario} > ${CSV_LATENCIA} &
+                dds-lab ./build/payload subscriber ${escenario} > ${CSV_LATENCIA} 2>/dev/null &
             SUB_PID=$!
 
             sleep 2
 
-            # 2. Limpieza preventiva y Monitor en la Pi
-            ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher 2>/dev/null || true"
+            # 2. Monitor en la Pi
             ssh ${PI_USER}@${PI_IP} "nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!" > monitor.pid
 
             # 3. Arrancar Publicador en la Pi (-w /app agregado aquí también)

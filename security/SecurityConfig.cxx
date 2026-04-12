@@ -94,7 +94,7 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
 {
     // 1. Caso base: Sin seguridad
     if (escenario == "none") {
-        std::cout << "ℹ️ [Security] Escenario 'none': Iniciando sin plugins de seguridad.\n";
+        std::cerr << "ℹ️ [Security] Escenario 'none': Iniciando sin plugins de seguridad.\n";
         return;
     }
 
@@ -118,7 +118,7 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
     const std::string permissions = make_file_uri(signed_dir, "permissions_" + perm_suffix + ".p7s");
 
     // 4. Logging de diagnóstico
-    std::cout << "🔒 [Security] Configurando Participante DDS:\n"
+    std::cerr << "🔒 [Security] Configurando Participante DDS:\n"
               << "   > Escenario: " << escenario << "\n"
               << "   > Rol:       " << rol << "\n"
               << "   > CA Path:   " << ca_cert << "\n"
@@ -145,12 +145,12 @@ void configure_security_qos(eprosima::fastdds::dds::DomainParticipantQos& pqos,
     // de mensajes de control RTPS falla con "Cannot encrypt submessage".
     add_prop(pqos, "dds.sec.crypto.plugin", "builtin.AES-GCM-GMAC");
     if (escenario == "encrypt" || escenario == "access") {
-        std::cout << "   > Cifrado:   Activado (AES-GCM-256)\n";
+        std::cerr << "   > Cifrado:   Activado (AES-GCM-256)\n";
     } else {
-        std::cout << "   > Cifrado:   GMAC-only (firma sin cifrado)\n";
+        std::cerr << "   > Cifrado:   GMAC-only (firma sin cifrado)\n";
     }
 
-    std::cout << "✅ [Security] Plugins inyectados correctamente.\n\n";
+    std::cerr << "✅ [Security] Plugins inyectados correctamente.\n\n";
 }
 
 } // namespace security
