@@ -131,16 +131,16 @@ void payloadSubscriber::SubListener::on_subscription_matched(
     if (info.current_count_change == 1)
     {
         matched = info.total_count;
-        std::cout << "Subscriber matched." << std::endl;
+        std::cerr << "Subscriber matched." << std::endl;
     }
     else if (info.current_count_change == -1)
     {
         matched = info.total_count;
-        std::cout << "Subscriber unmatched." << std::endl;
+        std::cerr << "Subscriber unmatched." << std::endl;
     }
     else
     {
-        std::cout << info.current_count_change
+        std::cerr << info.current_count_change
                   << " is not a valid value for SubscriptionMatchedStatus current count change" << std::endl;
     }
 }
@@ -172,12 +172,15 @@ void payloadSubscriber::SubListener::on_data_available(
 
 void payloadSubscriber::run()
 {
+    // CSV header — must be the very first line on stdout
+    std::cout << "SeqNum,PayloadBytes,Latency_us" << std::endl;
+
     // Definimos el límite según tu script (1000 calentamiento + 10000 medición)
     uint32_t n_muestras = 11000;
 
-    std::cout << "[Subscriber] Listo. Escuchando en 'payloadTopic'..." << std::endl;
-    std::cout << "[Subscriber] Esperando " << n_muestras << " muestras para cerrar..." << std::endl;
-    std::cout << "[Subscriber] Salida CSV -> SeqNum,PayloadSize(bytes),Latency(us)" << std::endl;
+    std::cerr << "[Subscriber] Listo. Escuchando en 'payloadTopic'..." << std::endl;
+    std::cerr << "[Subscriber] Esperando " << n_muestras << " muestras para cerrar..." << std::endl;
+    std::cerr << "[Subscriber] Salida CSV -> SeqNum,PayloadBytes,Latency_us" << std::endl;
 
     // Usamos listener_.samples que es lo que definiste en el .h
     while (listener_.samples < n_muestras)
@@ -185,6 +188,6 @@ void payloadSubscriber::run()
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    std::cout << "[Subscriber] ¡Prueba completada con éxito!" << std::endl;
-    std::cout << "[Subscriber] Total recibidas: " << listener_.samples << std::endl;
+    std::cerr << "[Subscriber] ¡Prueba completada con éxito!" << std::endl;
+    std::cerr << "[Subscriber] Total recibidas: " << listener_.samples << std::endl;
 }

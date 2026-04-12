@@ -51,9 +51,12 @@ for escenario in "${ESCENARIOS[@]}"; do
             CSV_LATENCIA="${DIR_PC}/resultados_latencia/Latencia_${escenario}_${payload}B_run${i}.csv"
             CSV_RECURSOS="${DIR_PI}/resultados_recursos/Recursos_${escenario}_${payload}B_run${i}.csv"
 
+            # 0. Limpiar contenedor publicador anterior en la Pi
+            ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher > /dev/null 2>&1"
+
             # 1. Arrancar Suscriptor en el PC con timeout de 5 minutos
             timeout 300 docker run --rm --net=host --ipc=host -w /app \
-                dds-lab ./build/payload subscriber ${escenario} > ${CSV_LATENCIA} &
+                dds-lab ./build/payload subscriber ${escenario} > ${CSV_LATENCIA} 2>/dev/null &
             SUB_PID=$!
 
             sleep 2 # Dar tiempo a que el Suscriptor esté escuchando
@@ -61,14 +64,12 @@ for escenario in "${ESCENARIOS[@]}"; do
             # 2. Arrancar el Monitor de Recursos en la Pi
             ssh ${PI_USER}@${PI_IP} "nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!" > monitor.pid
 
-            ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher > /dev/null 2>&1"
-
             # 3. Arrancar Publicador en la Pi con timeout de 5 minutos
             ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --net=host --ipc=host -w /app dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${escenario}" || echo "⚠️ Alerta: Timeout o error en el nodo publicador."
 
             # 4. Detener el Monitor de Recursos en la Pi
             PID_MONITOR=$(cat monitor.pid)
-            ssh ${PI_USER}@${PI_IP} "kill $PID_MONITOR"
+            ssh ${PI_USER}@${PI_IP} "kill $PID_MONITOR 2>/dev/null || true"
             rm monitor.pid
 
             # 5. Esperar a que el contenedor del Suscriptor local termine

@@ -235,7 +235,7 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-            std::cout << "\n[Subscriber] Escenario de seguridad: " << escenario << "\n\n";
+            std::cerr << "\n[Subscriber] Escenario de seguridad: " << escenario << "\n\n";
 
             // Inicializar el suscriptor con el escenario de seguridad
             payloadSubscriber mysub;
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-            std::cout << "[Subscriber] Listo. Escuchando en 'payloadTopic'...\n"
+            std::cerr << "[Subscriber] Listo. Escuchando en 'payloadTopic'...\n"
                       << "[Subscriber] Salida CSV → SeqNum,PayloadSize(bytes),Latency(µs)\n\n";
 
             // Bucle principal del suscriptor: bloquea hasta que el usuario
