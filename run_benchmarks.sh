@@ -4,7 +4,7 @@
 LOG_FILE="benchmark_$(date +%Y%m%d_%H%M%S).log"
 exec 1> >(tee -a "$LOG_FILE")
 exec 2>&1
-# run_benchmarks.sh - Ejecutar en CachyOS (PC)
+
 
 # ==========================================
 # VALIDACIONES CRÍTICAS DE DEPENDENCIAS
@@ -15,8 +15,8 @@ command -v ssh >/dev/null 2>&1 || { echo "❌ Error: SSH no está instalado en e
 # --- CONFIGURACIÓN ---
 PI_USER="pi"
 PI_IP="192.168.20.49"
-DIR_PI="/home/pi/DDS-Security-Lab"   # Ruta del proyecto en la Pi
-DIR_PC=$(pwd)                        # Ruta actual en CachyOS
+DIR_PI="/home/pi/DDS-Security-Lab"
+DIR_PC=$(pwd)
 
 ESCENARIOS=("none" "auth" "encrypt" "access")
 PAYLOADS=("256" "1024" "16384")

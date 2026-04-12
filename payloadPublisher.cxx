@@ -73,7 +73,7 @@ bool payloadPublisher::init(const std::string& escenario)
     // de llamar a create_participant(); no pueden añadirse a posteriori.
     // -------------------------------------------------------------------------
     DomainParticipantQos pqos;
-    pqos.name("Participant_pub");
+    pqos.name("PayloadPublisher");
 
     try
     {
