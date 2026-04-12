@@ -10,7 +10,7 @@
 
 #include "SecurityConfig.h"
 
-#include <fastrtps/rtps/common/PropertyPolicy.h>
+#include <fastrtps/rtps/common/Property.h>
 #include <sys/stat.h>
 #include <iostream>
 #include <vector>
