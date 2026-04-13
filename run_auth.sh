@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- CONFIGURACIÓN ---
-ESCENARIO="auth" # Cambia esto para cada script (auth, encrypt, access)
+ESCENARIO="auth"
 PAYLOADS=("256" "1024" "16384")
 CORRIDAS=30
 MENSAJES=11000
@@ -9,6 +9,10 @@ PI_IP="192.168.20.49"
 PI_USER="pi"
 DIR_PI="/home/pi/DDS-Security-Lab"
 DIR_PC=$(pwd)
+
+# Asegurar que las carpetas existen antes de empezar
+mkdir -p ${DIR_PC}/resultados_latencia
+ssh ${PI_USER}@${PI_IP} "mkdir -p ${DIR_PI}/resultados_recursos"
 
 echo "🚀 Iniciando Escenario: [$ESCENARIO]"
 
@@ -21,26 +25,36 @@ for payload in "${PAYLOADS[@]}"; do
         echo "▶️ Ejecutando corrida $i de $CORRIDAS..."
 
         CSV_LATENCIA="${DIR_PC}/resultados_latencia/Latencia_${ESCENARIO}_${payload}B_run${i}.csv"
+        # IMPORTANTE: Definimos la ruta del CSV de recursos para esta corrida
+        CSV_RECURSOS="${DIR_PI}/resultados_recursos/Recursos_${ESCENARIO}_${payload}B_run${i}.csv"
 
         # 1. Limpieza total (Local y Remota)
         docker rm -f dds_subscriber > /dev/null 2>&1
         ssh ${PI_USER}@${PI_IP} "docker rm -f pi_publisher > /dev/null 2>&1"
 
         # 2. Arrancar Suscriptor (PC)
-        # Usamos --name para poder matarlo luego fácilmente
         docker run --rm --name dds_subscriber --net=host --ipc=host -w /app \
             dds-lab ./build/payload subscriber ${ESCENARIO} > ${CSV_LATENCIA} 2>/dev/null &
         SUB_PID=$!
 
         sleep 2
 
-        # 3. Arrancar Publicador (Pi)
+        # 3. LANZAR MONITOR EN LA PI (Línea recuperada)
+        # Guardamos el PID en un archivo local para matarlo después
+        ssh ${PI_USER}@${PI_IP} "nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!" > monitor.pid
+
+        # 4. Arrancar Publicador (Pi)
         ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --net=host --ipc=host -w /app dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${ESCENARIO}"
 
-        # 4. TRUCO MAESTRO: Evitar el bloqueo
-        # Esperamos 5 segundos a que el suscriptor termine de procesar lo último
+        # 5. DETENER MONITOR EN LA PI (Línea recuperada)
+        PID_MONITOR=$(cat monitor.pid)
+        if [ ! -z "$PID_MONITOR" ]; then
+            ssh ${PI_USER}@${PI_IP} "kill -9 $PID_MONITOR 2>/dev/null || true"
+        fi
+        rm monitor.pid
+
+        # 6. Truco Maestro para el Suscriptor
         sleep 5
-        # Si el suscriptor sigue vivo (porque perdió algún paquete), lo matamos
         if ps -p $SUB_PID > /dev/null; then
             echo "⚠️ Suscriptor lento o con paquetes perdidos. Cerrando..."
             docker rm -f dds_subscriber > /dev/null 2>&1
@@ -50,3 +64,8 @@ for payload in "${PAYLOADS[@]}"; do
         sleep 10
     done
 done
+
+echo "📥 Sincronizando resultados de recursos a mi PC..."
+rsync -avzP ${PI_USER}@${PI_IP}:${DIR_PI}/resultados_recursos/ ./resultados_recursos_pi/
+
+echo "✅ Proceso completado."
