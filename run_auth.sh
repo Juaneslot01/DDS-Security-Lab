@@ -5,7 +5,7 @@ ESCENARIO="auth"
 PAYLOADS=("256" "1024" "16384")
 CORRIDAS=30
 MENSAJES=11000
-PI_IP="192.168.20.49"
+PI_IP="10.0.0.2"
 PI_USER="pi"
 DIR_PI="/home/pi/DDS-Security-Lab"
 DIR_PC=$(pwd)
@@ -13,6 +13,8 @@ DIR_PC=$(pwd)
 # Asegurar que las carpetas existen antes de empezar
 mkdir -p ${DIR_PC}/resultados_latencia
 ssh ${PI_USER}@${PI_IP} "mkdir -p ${DIR_PI}/resultados_recursos"
+
+
 
 echo "🚀 Iniciando Escenario: [$ESCENARIO]"
 
@@ -39,14 +41,14 @@ for payload in "${PAYLOADS[@]}"; do
 
         sleep 2
 
-        # 3. LANZAR MONITOR EN LA PI (Línea recuperada)
-        # Guardamos el PID en un archivo local para matarlo después
-        ssh ${PI_USER}@${PI_IP} "nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!" > monitor.pid
+        # 3. Arrancar Monitor de Recursos en la Pi
+        # Se usa bash -c para asegurar que nohup funcione correctamente vía SSH
+        ssh ${PI_USER}@${PI_IP} "bash -c 'nohup ${DIR_PI}/monitor_recursos.sh ${CSV_RECURSOS} > /dev/null 2>&1 & echo \$!'" > monitor.pid
 
         # 4. Arrancar Publicador (Pi)
         ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --net=host --ipc=host -w /app dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${ESCENARIO}"
 
-        # 5. DETENER MONITOR EN LA PI (Línea recuperada)
+        # 5. DETENER MONITOR EN LA PI
         PID_MONITOR=$(cat monitor.pid)
         if [ ! -z "$PID_MONITOR" ]; then
             ssh ${PI_USER}@${PI_IP} "kill -9 $PID_MONITOR 2>/dev/null || true"
