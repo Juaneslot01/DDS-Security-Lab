@@ -77,3 +77,12 @@ python3 graficar_resultados.py
 - run_benchmarks.sh: Orquestador maestro del experimento.
 - monitor_recursos.sh: Script de captura de métricas en la Raspberry Pi.
 - Dockerfile: Entorno reproducible basado en Ubuntu 22.04 y FastDDS.
+
+
+```bash
+sudo systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer snapd.service
+```
+
+```bash
+echo "performance" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+```
