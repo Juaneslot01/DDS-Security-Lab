@@ -121,6 +121,8 @@ bool payloadPublisher::init(const std::string& escenario)
     // CREATE THE WRITER
     DataWriterQos wqos = DATAWRITER_QOS_DEFAULT;
     wqos.endpoint().history_memory_policy = eprosima::fastrtps::rtps::PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
+
+    wqos.publish_mode().kind = eprosima::fastdds::dds::SYNCHRONOUS_PUBLISH_MODE;
     writer_ = publisher_->create_datawriter(topic_, wqos, &listener_);
     if (writer_ == nullptr)
     {
