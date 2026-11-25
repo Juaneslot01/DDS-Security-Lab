@@ -1,7 +1,15 @@
-# Material criptográfico (nunca versionar)
+# Material criptográfico: se monta en tiempo de ejecución, nunca se copia a la imagen
 security/pki/
 security/signed/
 *.pem
 *.key
 *.csr
 *.p7s
+
+# Artefactos y resultados locales
+build/
+resultados_latencia/
+resultados_recursos/
+resultados_recursos_pi/
+venv/
+.git/

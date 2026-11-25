@@ -37,12 +37,14 @@ COPY --chown=ddsuser:ddsuser . .
 # Cambiamos al usuario creado
 USER ddsuser
 
-# 6. Generar artefactos PKI y compilar
-# Combinamos la generación y compilación para mantener la coherencia
-RUN bash generate_security_artifacts.sh && \
-    rm -rf build && mkdir build && cd build && \
+# 6. Compilar
+# Los artefactos de seguridad (PKI y documentos firmados) NO se incluyen en la imagen.
+# Se generan en el host con generate_security_artifacts.sh y se montan en tiempo
+# de ejecución en modo solo lectura:  -v "$(pwd)/security:/app/security:ro"
+RUN rm -rf build && mkdir build && cd build && \
     cmake -DCMAKE_PREFIX_PATH=/opt/ros/humble .. && \
     make -j$(nproc)
+
 
 # 7. Ejecución
 CMD ["/bin/bash"]
