@@ -10,6 +10,10 @@ PI_USER="pi"
 DIR_PI="/home/pi/DDS-Security-Lab"
 DIR_PC=$(pwd)
 
+# 🔐 Artefactos de seguridad: se montan en solo lectura (no están dentro de la imagen)
+MOUNT_PC="-v ${DIR_PC}/security:/app/security:ro"
+MOUNT_PI="-v ${DIR_PI}/security:/app/security:ro"
+
 # 🎯 CONFIGURACIÓN DE DETERMINISMO (Aislamiento total en Core 0)
 CPU_CORE="0"
 
@@ -29,9 +33,9 @@ for payload in "${PAYLOADS[@]}"; do
     # Es vital para que el chequeo de permisos inicial no ensucie los datos
     # y la CPU alcance su frecuencia de operación estable.
     echo "🔥 Calentando motores para el stack completo de seguridad..."
-    docker run --rm --name dds_warmup --cpuset-cpus="$CPU_CORE" --net=host --ipc=host dds-lab ./build/payload subscriber $ESCENARIO > /dev/null 2>&1 &
+    docker run --rm --name dds_warmup --cpuset-cpus="$CPU_CORE" --net=host --ipc=host $MOUNT_PC dds-lab ./build/payload subscriber $ESCENARIO > /dev/null 2>&1 &
     sleep 3
-    ssh ${PI_USER}@${PI_IP} "docker run --rm --cpuset-cpus='$CPU_CORE' --net=host --ipc=host -w /app dds-lab ./build/payload publisher 5000 $payload 0 $ESCENARIO" > /dev/null 2>&1
+    ssh ${PI_USER}@${PI_IP} "docker run --rm --cpuset-cpus='$CPU_CORE' --net=host --ipc=host ${MOUNT_PI} -w /app dds-lab ./build/payload publisher 5000 $payload 0 $ESCENARIO" > /dev/null 2>&1
     docker rm -f dds_warmup > /dev/null 2>&1
     sleep 5
 
@@ -56,14 +60,14 @@ for payload in "${PAYLOADS[@]}"; do
 
         # --- 4. EJECUCIÓN (Aislamiento de Núcleo Forzado) ---
         # Suscriptor (PC - Limitado al Core 0)
-        docker run --rm --name dds_subscriber --cpuset-cpus="$CPU_CORE" --net=host --ipc=host -w /app \
+        docker run --rm --name dds_subscriber --cpuset-cpus="$CPU_CORE" --net=host --ipc=host $MOUNT_PC -w /app \
             dds-lab ./build/payload subscriber ${ESCENARIO} > ${CSV_LATENCIA} 2>/dev/null &
         SUB_PID=$!
 
         sleep 3 # Un segundo extra para que el handshake de seguridad se estabilice
 
         # Publicador (Pi - Limitado al Core 0)
-        ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --cpuset-cpus='$CPU_CORE' --net=host --ipc=host -w /app dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${ESCENARIO}"
+        ssh ${PI_USER}@${PI_IP} "timeout 300 docker run --rm --name pi_publisher --cpuset-cpus='$CPU_CORE' --net=host --ipc=host ${MOUNT_PI} -w /app dds-lab ./build/payload publisher ${MENSAJES} ${payload} 1000 ${ESCENARIO}"
 
         # --- 5. DETENCIÓN Y LIMPIEZA ---
         PID_MONITOR=$(cat monitor.pid)
