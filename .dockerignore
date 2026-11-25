@@ -1,0 +1,7 @@
+# Material criptográfico (nunca versionar)
+security/pki/
+security/signed/
+*.pem
+*.key
+*.csr
+*.p7s
