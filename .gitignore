@@ -25,3 +25,11 @@ cmake_install.cmake
 Makefile
 cmake_post_build.sh
 .cmake/
+
+# Material criptográfico (nunca versionar)
+security/pki/
+security/signed/
+*.pem
+*.key
+*.csr
+*.p7s
